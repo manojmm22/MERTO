@@ -16,13 +16,16 @@ from contextlib import contextmanager
 class Database:
     """SQLite database manager for the Metro Arrival Predictor."""
     
-    def __init__(self, db_path="metro.db"):
+    def __init__(self, db_path=None):
         """
         Initialize the database connection.
         
         Args:
-            db_path: Path to SQLite database file
+            db_path: Path to SQLite database file. Defaults to environment variable or metro.db
         """
+        if db_path is None:
+            # Use /tmp for Vercel (ephemeral filesystem), or local file for development
+            db_path = os.environ.get('DATABASE_PATH', 'metro.db')
         self.db_path = db_path
         self._init_database()
     
