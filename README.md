@@ -1,6 +1,6 @@
 # Metro Arrival Predictor
 
-A small **Flask** web app that estimates metro segment and full-line **arrival times** using a trained **linear Perceptron** model, with **SQLite** persistence and an interactive **Leaflet** route map.
+A small **Flask** web app that estimates metro segment and full-line **arrival times** using a trained **linear Perceptron** model, with **SQLite** persistence and a **corridor schematic** (line order, distances, and tables — no external map tiles).
 
 ## Features
 
@@ -8,7 +8,7 @@ A small **Flask** web app that estimates metro segment and full-line **arrival t
 - **Full-journey timeline** along seeded corridor stations  
 - **Perceptron** trained on synthetic data aligned with kinematic travel time  
 - **REST API** for predictions, stations, history, and statistics  
-- **Operations-style UI** with map, stats, and recent prediction history  
+- **Operations-style UI** with corridor schematic, stats, and recent prediction history  
 
 ## Tech stack
 
@@ -17,7 +17,7 @@ A small **Flask** web app that estimates metro segment and full-line **arrival t
 | Web | Flask 3 |
 | ML | Single-layer Perceptron (pure Python) |
 | Data | SQLite (`metro.db` auto-created on first run) |
-| Map | Leaflet + OpenStreetMap / Esri imagery |
+| Corridor UI | CSS schematic + station table (no Leaflet) |
 
 ## Project layout
 
@@ -67,7 +67,7 @@ python app.py
 
 Open **http://127.0.0.1:5000** in your browser.
 
-The first run creates `metro.db` and seeds default stations with coordinates for the map.
+The first run creates `metro.db` and seeds default stations (including lat/long for optional future use).
 
 ## API (summary)
 
@@ -76,7 +76,7 @@ The first run creates `metro.db` and seeds default stations with coordinates for
 | `GET` | `/` | Web UI |
 | `POST` | `/api/predict` | Single-segment prediction (JSON) |
 | `POST` | `/api/journey` | Full line prediction |
-| `GET` | `/api/stations` | Stations for map and journey |
+| `GET` | `/api/stations` | Stations for corridor UI and journey |
 | `GET` | `/api/history?limit=20` | Recent predictions |
 | `GET` | `/api/statistics` | Counts (stations, predictions, routes) |
 | `POST` | `/api/train` | Retrain / reload model |

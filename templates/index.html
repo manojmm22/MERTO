@@ -3,14 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="Metro arrival time prediction: linear Perceptron model, SQLite history, route map.">
+    <meta name="description" content="Metro arrival time prediction: linear Perceptron model, SQLite history, corridor schematic.">
     <meta name="theme-color" content="#030712">
     <title>Metro Arrival Predictor | Operations Console</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <!-- Leaflet CSS -->
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
         /* ===== CSS Variables ===== */
         :root {
@@ -681,29 +679,6 @@
         }
 
         /* ===== Station Map ===== */
-        .station-map {
-            background: var(--primary);
-            border-radius: var(--radius-md);
-            padding: 1rem;
-            border: 1px solid var(--border);
-        }
-
-        .map-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 0.75rem;
-        }
-
-        .map-title {
-            font-size: 0.85rem;
-            font-weight: 600;
-            color: var(--text-secondary);
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-
         .live-indicator {
             display: flex;
             align-items: center;
@@ -732,68 +707,146 @@
             0%, 100% { opacity: 1; transform: scale(1); }
             50% { opacity: 0.5; transform: scale(1.3); }
         }
-        
-        #map {
-            height: 300px;
-            width: 100%;
-            border-radius: var(--radius-sm);
-            margin-bottom: 0.75rem;
+
+        /* Corridor schematic (no Leaflet — no tile / CORS issues) */
+        .route-panel {
+            background: var(--primary);
+            border-radius: var(--radius-md);
+            padding: 1rem;
             border: 1px solid var(--border);
-            background: #1a1a2e;
-            z-index: 1;
-            position: relative;
         }
 
-        /* Leaflet map fixes */
-        .leaflet-container {
-            background: #1a1a2e !important;
-            font-family: inherit !important;
-            min-height: 300px;
-            width: 100% !important;
+        .route-panel-hint {
+            font-size: 0.78rem;
+            color: var(--text-muted);
+            margin-bottom: 0.5rem;
+            line-height: 1.45;
         }
 
-        .leaflet-tile-pane {
-            filter: brightness(0.92) contrast(1.05);
+        .api-status {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            font-size: 0.72rem;
+            font-family: 'JetBrains Mono', monospace;
+            color: var(--text-secondary);
+            margin-bottom: 0.75rem;
         }
 
-        .leaflet-control-zoom {
-            border: none !important;
-            box-shadow: var(--shadow-md) !important;
+        .api-status .ok { color: var(--accent-tertiary); }
+        .api-status .err { color: #f87171; }
+
+        .route-schematic-scroll {
+            overflow-x: auto;
+            padding: 0.35rem 0 0.5rem;
+            margin: 0 -0.25rem;
+            -webkit-overflow-scrolling: touch;
         }
 
-        .leaflet-control-zoom a {
-            background: var(--card-bg) !important;
-            color: var(--text) !important;
-            border: 1px solid var(--border) !important;
+        .route-schematic {
+            display: flex;
+            align-items: flex-start;
+            justify-content: flex-start;
+            gap: 0;
+            min-width: min-content;
+            padding: 0.35rem 0.25rem;
         }
 
-        .leaflet-control-zoom a:hover {
-            background: var(--primary) !important;
-            color: var(--accent) !important;
+        .route-schematic .seg {
+            display: flex;
+            align-items: center;
         }
 
-        .leaflet-popup-content-wrapper {
-            background: var(--card-bg) !important;
-            color: var(--text) !important;
-            border-radius: var(--radius-sm) !important;
-            box-shadow: var(--shadow-lg) !important;
+        .route-node {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.3rem;
+            width: 76px;
+            flex-shrink: 0;
+            text-align: center;
         }
 
-        .leaflet-popup-tip {
-            background: var(--card-bg) !important;
+        .route-node-dot {
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            background: var(--gradient-primary);
+            border: 3px solid var(--card-bg);
+            box-shadow: 0 0 12px rgba(6, 182, 212, 0.45);
         }
 
-        .leaflet-popup-content {
-            margin: 0.75rem !important;
+        .route-node-dot.origin {
+            background: var(--gradient-success);
+            box-shadow: 0 0 12px rgba(16, 185, 129, 0.4);
+        }
+
+        .route-node-name {
+            font-size: 0.72rem;
+            font-weight: 600;
+            color: var(--text);
+            line-height: 1.2;
+            max-height: 2.4em;
+            overflow: hidden;
+        }
+
+        .route-node-meta {
+            font-size: 0.62rem;
+            color: var(--text-muted);
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .route-schematic .line {
+            width: 36px;
+            height: 4px;
+            flex-shrink: 0;
+            background: linear-gradient(90deg, var(--accent), var(--accent-secondary));
+            border-radius: 2px;
+            opacity: 0.9;
+            align-self: flex-start;
+            margin-top: 7px;
         }
 
         @media (max-width: 640px) {
-            #map {
-                height: 220px;
-            }
+            .route-schematic .line { width: 22px; }
+            .route-node { width: 68px; }
         }
-        
-        #route-list {
+
+        .route-table-wrap {
+            margin-top: 0.75rem;
+            max-height: 200px;
+            overflow: auto;
+            border: 1px solid var(--border-light);
+            border-radius: var(--radius-sm);
+        }
+
+        .route-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.78rem;
+        }
+
+        .route-table th,
+        .route-table td {
+            padding: 0.45rem 0.5rem;
+            text-align: left;
+            border-bottom: 1px solid var(--border-light);
+        }
+
+        .route-table th {
+            color: var(--text-muted);
+            font-weight: 500;
+            font-size: 0.68rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            position: sticky;
+            top: 0;
+            background: var(--primary);
+        }
+
+        .route-table tr:last-child td { border-bottom: none; }
+
+        #route-tags {
             display: flex;
             flex-wrap: wrap;
             gap: 0.5rem;
@@ -840,50 +893,21 @@
             border-radius: 50%;
         }
 
-        /* Train Marker Custom Styles */
-        .train-marker {
-            background: var(--gradient-accent);
-            border-radius: 50%;
-            border: 3px solid var(--text);
-            box-shadow: 0 2px 10px rgba(245, 158, 11, 0.5);
-            animation: trainPulse 2s infinite;
-        }
-
-        @keyframes trainPulse {
-            0%, 100% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.5); }
-            50% { box-shadow: 0 0 0 10px rgba(245, 158, 11, 0); }
-        }
-
-        .map-controls {
-            display: flex;
-            gap: 0.5rem;
-            margin-bottom: 0.5rem;
-        }
-
-        .map-control-btn {
-            background: var(--card-bg);
-            border: 1px solid var(--border);
-            color: var(--text-secondary);
-            padding: 0.375rem 0.625rem;
-            border-radius: var(--radius-sm);
-            font-size: 0.75rem;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            display: flex;
-            align-items: center;
-            gap: 0.25rem;
-        }
-
-        .map-control-btn:hover {
+        .segment-bar {
+            height: 6px;
             background: var(--primary);
-            color: var(--accent);
-            border-color: var(--accent);
+            border-radius: 4px;
+            overflow: hidden;
+            margin-top: 0.5rem;
+            border: 1px solid var(--border);
         }
 
-        .map-control-btn.active {
-            background: var(--gradient-primary);
-            color: var(--primary);
-            border-color: transparent;
+        .segment-fill {
+            height: 100%;
+            width: 0%;
+            background: var(--gradient-accent);
+            border-radius: 4px;
+            transition: width 0.35s ease;
         }
 
         /* Train Position Info */
@@ -1152,7 +1176,7 @@
         <div class="section-intro">
             <h2>Transit ETA — linear model &amp; operations view</h2>
             <p>Predict segment and full-line arrivals from departure time, inter-station distance, cruise speed, and dwell. 
-               Results are logged for audit; the map reflects your configured corridor.</p>
+               Results are logged for audit; the corridor panel shows line order from the database (no external map tiles).</p>
         </div>
 
         <div class="main-grid">
@@ -1340,48 +1364,49 @@
                     </div>
                 </div>
 
-                <!-- Station Route Map -->
+                <!-- Corridor layout (schematic — replaces geographic map) -->
                 <div class="section-header">
                     <h3 class="section-title">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"></polygon>
-                            <line x1="8" y1="2" x2="8" y2="18"></line>
-                            <line x1="16" y1="6" x2="16" y2="22"></line>
+                            <polyline points="4 17 10 11 4 5"></polyline>
+                            <line x1="12" y1="19" x2="20" y2="19"></line>
                         </svg>
-                        Metro Route Map
+                        Corridor layout
                     </h3>
-                    <div class="live-indicator">Live</div>
+                    <div class="live-indicator">Schematic</div>
                 </div>
-                <div id="station-map" class="station-map">
-                    <div class="map-controls">
-                        <button type="button" class="map-control-btn active" onclick="setMapView('route', this)">
-                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
-                                <circle cx="12" cy="10" r="3"></circle>
-                            </svg>
-                            Route
-                        </button>
-                        <button type="button" class="map-control-btn" onclick="setMapView('satellite', this)">
-                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <circle cx="12" cy="12" r="10"></circle>
-                                <line x1="2" y1="12" x2="22" y2="12"></line>
-                                <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
-                            </svg>
-                            Satellite
-                        </button>
+                <div id="route-panel" class="route-panel">
+                    <p class="route-panel-hint">Stops in line order from SQLite. No map tiles — works offline and avoids Leaflet/tile errors.</p>
+                    <div id="api-status" class="api-status" aria-live="polite"><span class="err">Stations: loading…</span></div>
+                    <div class="route-schematic-scroll">
+                        <div id="route-schematic" class="route-schematic" role="list"></div>
                     </div>
-                    <div id="map"></div>
-                    <div id="route-list"></div>
-                    
-                    <!-- Live Train Position -->
+                    <div class="route-table-wrap">
+                        <table class="route-table">
+                            <thead>
+                                <tr>
+                                    <th>#</th>
+                                    <th>Station</th>
+                                    <th>Leg km</th>
+                                    <th>From start</th>
+                                </tr>
+                            </thead>
+                            <tbody id="route-table-body"></tbody>
+                        </table>
+                    </div>
+                    <div id="route-tags"></div>
+
                     <div id="train-position" class="train-position">
                         <div class="train-position-header">
                             <span>🚇</span>
-                            <strong style="color: var(--accent-secondary);">Train Position</strong>
+                            <strong style="color: var(--accent-secondary);">Journey segment (demo)</strong>
                         </div>
                         <div class="train-position-info">
-                            <div>Current Station: <span class="value" id="current-station">--</span></div>
-                            <div>Next Arrival: <span class="value" id="next-arrival">--:--</span></div>
+                            <div>From <span class="value" id="current-station">--</span> toward <span class="value" id="next-station-name">--</span></div>
+                            <div>Next arrival: <span class="value" id="next-arrival">--:--</span></div>
+                        </div>
+                        <div class="segment-bar" title="Simulated progress along current segment">
+                            <div id="segment-progress" class="segment-fill"></div>
                         </div>
                     </div>
                 </div>
@@ -1425,8 +1450,6 @@
 
     <div class="toast-wrap" id="toastWrap" aria-live="polite"></div>
 
-    <!-- Leaflet must load before any inline code that references L -->
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
         function showToast(message, isError) {
             const wrap = document.getElementById('toastWrap');
@@ -1454,7 +1477,7 @@
             tickOpsClock();
             setInterval(tickOpsClock, 1000);
             loadStatistics();
-            loadStationMap();
+            loadRoutePanel();
             loadHistory();
             initSliders();
         });
@@ -1655,197 +1678,111 @@
             }
         }
 
-        // Load station map
-        let map = null;
-        let trainMarker = null;
-        let stationMarkers = [];
-        let routeLayers = [];
+        // Corridor schematic (replaces Leaflet map)
         let stationData = [];
-        let currentMapType = 'route';
         let liveTrackingInterval = null;
 
-        // Custom train icon
-        const trainIcon = L.divIcon({
-            className: 'train-marker',
-            html: '<div style="width: 24px; height: 24px; background: linear-gradient(135deg, #F59E0B, #D97706); border-radius: 50%; border: 3px solid #fff; box-shadow: 0 2px 10px rgba(245,158,11,0.5); display: flex; align-items: center; justify-content: center; font-size: 12px;">🚇</div>',
-            iconSize: [30, 30],
-            iconAnchor: [15, 15]
-        });
+        function scrollToRouteNode(index) {
+            var node = document.querySelector('.route-node[data-stop-index="' + index + '"]');
+            if (node && node.scrollIntoView) {
+                node.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+            }
+        }
 
-        // Custom station icon
-        const stationIcon = L.divIcon({
-            className: 'station-marker',
-            html: '<div style="width: 14px; height: 14px; background: #06B6D4; border-radius: 50%; border: 3px solid #111827; box-shadow: 0 0 10px rgba(6,182,212,0.5);"></div>',
-            iconSize: [20, 20],
-            iconAnchor: [10, 10]
-        });
-
-        // Map tile layers
-        const mapLayers = {
-            route: L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                attribution: '© OpenStreetMap',
-                maxZoom: 19
-            }),
-            satellite: L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-                attribution: '© Esri',
-                maxZoom: 19
-            })
-        };
-
-        async function loadStationMap() {
+        async function loadRoutePanel() {
+            var statusEl = document.getElementById('api-status');
+            var schematic = document.getElementById('route-schematic');
+            var tbody = document.getElementById('route-table-body');
+            var tags = document.getElementById('route-tags');
             try {
-                const response = await fetch('/api/stations');
-                const data = await response.json();
-                
-                if (data.success && data.stations.length > 0) {
-                    stationData = data.stations;
-                    
-                    // Initialize Leaflet map
-                    if (!map) {
-                        map = L.map('map', {
-                            zoomControl: false,
-                            scrollWheelZoom: true
-                        }).setView([40.72, -74.006], 13);
-                        
-                        mapLayers.route.addTo(map);
-                        
-                        // Add zoom control to top-right
-                        L.control.zoom({ position: 'topright' }).addTo(map);
-                        window.addEventListener('resize', function onMetroMapResize() {
-                            if (map) { map.invalidateSize(); }
-                        });
-                    }
-                    
-                    // Clear existing markers and polylines
-                    stationMarkers.forEach(m => map.removeLayer(m));
-                    stationMarkers = [];
-                    routeLayers.forEach(layer => map.removeLayer(layer));
-                    routeLayers = [];
-                    if (trainMarker) map.removeLayer(trainMarker);
-                    
-                    // Add markers and route line
-                    const latlngs = [];
-                    const routeList = document.getElementById('route-list');
-                    routeList.innerHTML = '';
-                    
-                    data.stations.forEach((station, index) => {
-                        if (station.latitude && station.longitude) {
-                            latlngs.push([station.latitude, station.longitude]);
-                            
-                            // Add marker with custom icon
-                            const marker = L.marker([station.latitude, station.longitude], { icon: stationIcon })
-                                .addTo(map)
-                                .bindPopup(`<div style="text-align:center;"><b>${station.name}</b><br>Stop #${index + 1}<br><small>${station.distance_from_previous} km from previous</small></div>`);
-                            stationMarkers.push(marker);
-                            
-                            // Add to route list with click to focus
-                            const tag = document.createElement('div');
-                            tag.className = 'station-tag' + (index === 0 ? ' start' : '');
-                            tag.innerHTML = `<span class="dot"></span> ${station.name}`;
-                            tag.onclick = () => {
-                                map.setView([station.latitude, station.longitude], 16);
-                                document.querySelectorAll('.station-tag').forEach(t => t.classList.remove('active'));
-                                tag.classList.add('active');
-                            };
-                            routeList.appendChild(tag);
-                        }
-                    });
-                    
-                    // Draw route line with glow effect
-                    if (latlngs.length > 1) {
-                        routeLayers.push(L.polyline(latlngs, {
-                            color: '#06B6D4',
-                            weight: 6,
-                            opacity: 0.3
-                        }).addTo(map));
-                        routeLayers.push(L.polyline(latlngs, {
-                            color: '#06B6D4',
-                            weight: 3,
-                            opacity: 0.9
-                        }).addTo(map));
-                    }
-                    
-                    // Fit map to bounds
-                    if (latlngs.length > 0) {
-                        map.fitBounds(latlngs, {padding: [30, 30]});
-                    }
-                    // Fix blank/gray tiles when the map is laid out after init (grid, fonts, etc.)
-                    requestAnimationFrame(function() {
-                        if (map) {
-                            map.invalidateSize();
-                            setTimeout(function() {
-                                if (map) {
-                                    map.invalidateSize();
-                                    if (latlngs.length > 0) {
-                                        map.fitBounds(latlngs, { padding: [30, 30] });
-                                    }
-                                }
-                            }, 150);
-                        }
-                    });
-                } else {
-                    var mapEl = document.getElementById('map');
-                    if (mapEl) {
-                        mapEl.innerHTML = '<p style="padding:1rem;color:var(--text-secondary);font-size:0.9rem;">No station coordinates loaded. Check API / database.</p>';
-                    }
+                var response = await fetch('/api/stations');
+                var data = await response.json();
+                if (!data.success || !data.stations || data.stations.length === 0) {
+                    stationData = [];
+                    if (statusEl) statusEl.innerHTML = '<span class="err">Stations: none (check database)</span>';
+                    if (schematic) schematic.innerHTML = '';
+                    if (tbody) tbody.innerHTML = '';
+                    if (tags) tags.innerHTML = '';
+                    return;
                 }
+                stationData = data.stations;
+                if (statusEl) {
+                    statusEl.innerHTML = '<span class="ok">GET /api/stations · ' + stationData.length + ' stops</span>';
+                }
+
+                var cum = 0;
+                var rows = '';
+                schematic.innerHTML = '';
+                data.stations.forEach(function(station, index) {
+                    var leg = index === 0 ? 0 : parseFloat(station.distance_from_previous) || 0;
+                    if (index > 0) cum += leg;
+                    rows += '<tr><td>' + (index + 1) + '</td><td>' + escapeHtml(station.name) + '</td><td>' +
+                        (index === 0 ? '—' : leg.toFixed(1)) + '</td><td>' + cum.toFixed(1) + ' km</td></tr>';
+
+                    var node = document.createElement('div');
+                    node.className = 'route-node';
+                    node.setAttribute('role', 'listitem');
+                    node.setAttribute('data-stop-index', String(index));
+                    node.innerHTML =
+                        '<div class="route-node-dot' + (index === 0 ? ' origin' : '') + '"></div>' +
+                        '<div class="route-node-name">' + escapeHtml(station.name) + '</div>' +
+                        '<div class="route-node-meta">+' + (index === 0 ? '0' : leg.toFixed(1)) + ' km</div>';
+                    schematic.appendChild(node);
+
+                    if (index < data.stations.length - 1) {
+                        var line = document.createElement('div');
+                        line.className = 'seg';
+                        line.setAttribute('aria-hidden', 'true');
+                        line.innerHTML = '<div class="line"></div>';
+                        schematic.appendChild(line);
+                    }
+                });
+                tbody.innerHTML = rows;
+
+                tags.innerHTML = '';
+                data.stations.forEach(function(station, index) {
+                    var tag = document.createElement('div');
+                    tag.className = 'station-tag' + (index === 0 ? ' start' : '');
+                    tag.innerHTML = '<span class="dot"></span> ' + escapeHtml(station.name);
+                    tag.onclick = function() {
+                        document.querySelectorAll('#route-tags .station-tag').forEach(function(t) { t.classList.remove('active'); });
+                        tag.classList.add('active');
+                        scrollToRouteNode(index);
+                    };
+                    tags.appendChild(tag);
+                });
             } catch (error) {
-                console.error('Failed to load station map:', error);
-                showToast('Map could not load stations. Is the server running?', true);
+                console.error('Failed to load route panel:', error);
+                stationData = [];
+                if (statusEl) statusEl.innerHTML = '<span class="err">Stations: error (is the server running?)</span>';
+                showToast('Could not load stations from API.', true);
             }
         }
 
-        // Map view toggle
-        function setMapView(type, btn) {
-            currentMapType = type;
-            document.querySelectorAll('#station-map .map-control-btn').forEach(b => b.classList.remove('active'));
-            var btnEl = btn && btn.closest ? btn.closest('.map-control-btn') : null;
-            if (btnEl) btnEl.classList.add('active');
-            
-            if (map) {
-                map.removeLayer(mapLayers.route);
-                map.removeLayer(mapLayers.satellite);
-                mapLayers[type].addTo(map);
-            }
+        function escapeHtml(s) {
+            var d = document.createElement('div');
+            d.textContent = s;
+            return d.innerHTML;
         }
 
-        // Update train position on map
-        function updateTrainPosition(stationIndex, progress, nextStation) {
-            if (!map || stationData.length < 2) return;
-            
-            // Remove existing train marker
-            if (trainMarker) {
-                map.removeLayer(trainMarker);
-            }
-            
+        function updateTrainPosition(stationIndex, progress, nextArrival) {
+            if (stationData.length < 2) return;
+
             if (stationIndex >= stationData.length - 1) {
-                // Train reached end
                 document.getElementById('train-position').classList.remove('active');
+                document.getElementById('segment-progress').style.width = '0%';
                 return;
             }
-            
-            const currentStation = stationData[stationIndex];
-            const nextStationData = stationData[stationIndex + 1];
-            
-            if (currentStation.latitude && nextStationData.latitude) {
-                // Calculate interpolated position
-                const lat = currentStation.latitude + (nextStationData.latitude - currentStation.latitude) * progress;
-                const lng = currentStation.longitude + (nextStationData.longitude - currentStation.longitude) * progress;
-                
-                // Add train marker
-                trainMarker = L.marker([lat, lng], { icon: trainIcon })
-                    .addTo(map)
-                    .bindPopup(`<div style="text-align:center;"><b>🚇 Running Train</b><br>Between ${currentStation.name} & ${nextStationData.name}</div>`);
-                
-                // Show train position info
-                const trainPos = document.getElementById('train-position');
-                trainPos.classList.add('active');
-                document.getElementById('current-station').textContent = currentStation.name;
-                document.getElementById('next-arrival').textContent = nextStation || '--:--';
-                
-                // Auto-follow train (optional - can be disabled for user control)
-                // map.setView([lat, lng], 15);
-            }
+
+            var currentStation = stationData[stationIndex];
+            var nextStationData = stationData[stationIndex + 1];
+            var trainPos = document.getElementById('train-position');
+            trainPos.classList.add('active');
+            document.getElementById('current-station').textContent = currentStation.name;
+            document.getElementById('next-station-name').textContent = nextStationData.name;
+            document.getElementById('next-arrival').textContent = nextArrival || '--:--';
+            var pct = Math.round(Math.min(1, Math.max(0, progress)) * 100);
+            document.getElementById('segment-progress').style.width = pct + '%';
         }
 
         // Simulate live train tracking based on journey prediction
